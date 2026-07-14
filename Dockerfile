@@ -1,7 +1,6 @@
 FROM debian:bullseye-slim
-
-LABEL maintainer="Brett - github.com/brettmayson"
-LABEL org.opencontainers.image.source=https://github.com/brettmayson/arma3server
+LABEL maintainer="Brett - github.com/brettmayson, modified for Pterodactyl by innocent16"
+LABEL org.opencontainers.image.source=https://github.com/inocent16/Arma3Server
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
@@ -28,7 +27,19 @@ RUN apt-get update \
     && \
     wget -qO- 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz' | tar zxf - -C /steamcmd
 
-ENV ARMA_BINARY=./arma3server
+# Pterodactyl-compatible user (matches Wings default uid 999 / gid 988)
+RUN groupadd -g 988 pterodactyl \
+    && useradd -u 999 -g 988 -M -N -s /usr/sbin/nologin container \
+    && chown -R 999:988 /steamcmd
+
+# Redirect Arma's fixed /arma3 working path to Pterodactyl's persistent mount point.
+# All scripts (launch.py, workshop.py, local.py, keys.py) reference /arma3 either
+# directly or via relative paths against WORKDIR /arma3 -- this symlink means every
+# one of those writes transparently lands inside the volume Wings actually persists,
+# with zero changes needed to the Python source.
+RUN rm -rf /arma3 && mkdir -p /home/container && ln -s /home/container /arma3
+
+ENV ARMA_BINARY=./arma3server_x64
 ENV ARMA_CONFIG=main.cfg
 ENV ARMA_PARAMS=
 ENV ARMA_PROFILE=main
@@ -53,14 +64,7 @@ EXPOSE 2306/udp
 
 WORKDIR /arma3
 
-VOLUME /steamcmd
-VOLUME /arma3/addons
-VOLUME /arma3/enoch
-VOLUME /arma3/expansion
-VOLUME /arma3/jets
-VOLUME /arma3/heli
-VOLUME /arma3/orange
-VOLUME /arma3/argo
+USER container
 
 STOPSIGNAL SIGINT
 
