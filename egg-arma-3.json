@@ -1,0 +1,222 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - github.com/inocent16/Arma3Server",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-07-16T00:00:00+00:00",
+    "name": "Arma 3",
+    "author": "phillip@ehrke.online",
+    "description": "Arma 3 Dedicated Server. Updates to the latest version via steamcmd every time it starts. Requires 5 contiguous UDP port allocations (primary + 4 additional, e.g. 2302-2306) -- Arma 3 uses the primary port through primary+3 for game traffic and VoN. The Steam account used does not need to own Arma 3, but must have Steam Guard disabled.",
+    "features": null,
+    "docker_images": {
+        "Debian 11": "ghcr.io/inocent16/arma3server:latest"
+    },
+    "file_denylist": [],
+    "startup": "python3 /launch.py",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Host identity created.\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/ash\n# No separate install step is needed: /launch.py installs/updates steamcmd\n# and the Arma 3 dedicated server itself inside the persistent volume the\n# first time (and every time) the server container starts, unless\n# SKIP_INSTALL=true is set. This step just makes sure the volume exists.\nmkdir -p /mnt/server\necho \"Nothing to pre-install. Arma 3 + steamcmd will be installed/updated on first boot.\"",
+            "container": "ghcr.io/pterodactyl/installers:alpine",
+            "entrypoint": "ash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Steam Username",
+            "description": "Steam account username used by steamcmd to download Arma 3. Does not need to own the game, but must have Steam Guard disabled.",
+            "env_variable": "STEAM_USER",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Password",
+            "description": "Password for the Steam account above.",
+            "env_variable": "STEAM_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Branch",
+            "description": "Steam branch used by steamcmd, e.g. public or creatordlc.",
+            "env_variable": "STEAM_BRANCH",
+            "default_value": "public",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Branch Password",
+            "description": "Password for the Steam branch above, if required.",
+            "env_variable": "STEAM_BRANCH_PASSWORD",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Steam Additional Depot",
+            "description": "Pipe-separated list of additional depot,manifest pairs to download, e.g. depotid,manifestid|depotid,manifestid.",
+            "env_variable": "STEAM_ADDITIONAL_DEPOT",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:512",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma Binary",
+            "description": "Server binary to run. Use ./arma3server_x64 for the 64-bit binary.",
+            "env_variable": "ARMA_BINARY",
+            "default_value": "./arma3server_x64",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma Config",
+            "description": "Config file to load, relative to /arma3/configs.",
+            "env_variable": "ARMA_CONFIG",
+            "default_value": "main.cfg",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma Params",
+            "description": "Additional CLI parameters passed to the server binary.",
+            "env_variable": "ARMA_PARAMS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:1024",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma Profile",
+            "description": "Profile name, stored in /arma3/configs/profiles.",
+            "env_variable": "ARMA_PROFILE",
+            "default_value": "main",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma World",
+            "description": "World to load on startup.",
+            "env_variable": "ARMA_WORLD",
+            "default_value": "empty",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:64",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma Limit FPS",
+            "description": "Maximum server FPS.",
+            "env_variable": "ARMA_LIMITFPS",
+            "default_value": "1000",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|max:10000",
+            "field_type": "text"
+        },
+        {
+            "name": "Arma CDLC",
+            "description": "Semicolon-separated list of Creator DLC mod flags to load, e.g. csla;gm;vn. Requires Steam Branch to be set to creatordlc.",
+            "env_variable": "ARMA_CDLC",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Headless Clients",
+            "description": "Number of headless clients to launch alongside the server.",
+            "env_variable": "HEADLESS_CLIENTS",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|min:0|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Headless Client Profile",
+            "description": "Headless client profile name template. Supports the placeholders $profile, $i and $ii.",
+            "env_variable": "HEADLESS_CLIENTS_PROFILE",
+            "default_value": "$profile-hc-$i",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Mods Local",
+            "description": "Whether the /arma3/mods folder should be loaded.",
+            "env_variable": "MODS_LOCAL",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Mods Preset",
+            "description": "Path or URL to an Arma 3 Launcher HTML preset file to install Workshop mods from.",
+            "env_variable": "MODS_PRESET",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Skip Install",
+            "description": "Skip the steamcmd install/update step on startup.",
+            "env_variable": "SKIP_INSTALL",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Clear Keys",
+            "description": "Clear the /arma3/keys directory on every launch before mod keys are re-copied in.",
+            "env_variable": "CLEAR_KEYS",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Server Port",
+            "description": "Internal: mirrors the primary allocation port assigned by Wings. Arma 3 uses this port through port+3.",
+            "env_variable": "PORT",
+            "default_value": "{{SERVER_PORT}}",
+            "user_viewable": false,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        }
+    ]
+}

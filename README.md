@@ -21,7 +21,7 @@ An Arma 3 Dedicated Server. Updates to the latest version every time it is resta
         -e ARMA_CONFIG=main.cfg \
         -e STEAM_USER=myusername \
         -e STEAM_PASSWORD=mypassword \
-        ghcr.io/brettmayson/arma3server/arma3server:latest
+        ghcr.io/inocent16/arma3server:latest
 ```
 
 ### docker-compose
@@ -43,6 +43,28 @@ Use `docker-compose up -d` to start the server, detached.
 See [Docker-compose](https://docs.docker.com/compose/install/#install-compose) for an installation guide.
 
 Profiles are saved in `/arma3/configs/profiles`
+
+### Pterodactyl
+
+This image runs as an unprivileged `container` user with home directory `/home/container`, which Wings chowns to the
+server's configured uid/gid and mounts as the server's data volume. A symlink (`/arma3` -> `/home/container`) means
+none of the Python scripts needed to change to support this -- steamcmd, the game files, mods, configs and keys all
+end up inside that same persistent volume.
+
+To add it to a panel:
+
+1. Import [`egg-arma-3.json`](egg-arma-3.json) via **Admin -> Nests -> Import Egg**.
+2. Make sure a Docker image is published to `ghcr.io/inocent16/arma3server:latest` (the `Publish Docker` GitHub Actions
+   workflow builds and pushes this automatically on pushes to `v2`, or can be triggered manually).
+3. When creating the server, allocate **5 contiguous UDP ports** (e.g. `2302-2306`) and set the primary allocation to
+   the first one. Arma 3 binds to the primary port through primary+3; the extra allocations must exist on the node
+   for Wings to publish them, even though only the primary one is exposed as an egg variable.
+4. Set the `Steam Username`/`Steam Password` variables. Steam Guard must be disabled on that account.
+
+The first boot will take a while, since steamcmd downloads the full Arma 3 server (and re-validates it on every
+subsequent boot unless `Skip Install` is set to `true`). The egg's "server started" detection looks for
+`Host identity created.` in the console output -- if your setup doesn't emit that (some mod configurations or Arma
+updates change console output), adjust the `startup.done` string in the egg's Startup Detection settings.
 
 ## Parameters
 
