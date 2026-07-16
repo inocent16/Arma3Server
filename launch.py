@@ -3,16 +3,17 @@ import re
 import shutil
 import subprocess
 from string import Template
+from typing import List
 
 import local
 import workshop
 
 
-def mod_param(name, mods):
+def mod_param(name: str, mods: List[str]) -> str:
     return ' -{}="{}" '.format(name, ";".join(mods))
 
 
-def env_defined(key):
+def env_defined(key: str) -> bool:
     return key in os.environ and len(os.environ[key]) > 0
 
 
@@ -26,10 +27,23 @@ if not os.path.isdir(KEYS):
         os.remove(KEYS)
     os.makedirs(KEYS)
 
+STEAMCMD_DIR = "/arma3/steamcmd"
+STEAMCMD_SH = os.path.join(STEAMCMD_DIR, "steamcmd.sh")
+
 if os.environ["SKIP_INSTALL"] in ["", "false"]:
     # Install Arma
 
-    steamcmd = ["/steamcmd/steamcmd.sh"]
+    if not os.path.isfile(STEAMCMD_SH):
+        os.makedirs(STEAMCMD_DIR, exist_ok=True)
+        subprocess.run(
+            "wget -qO- 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz' | tar zxf - -C {}".format(
+                STEAMCMD_DIR
+            ),
+            shell=True,
+            check=True,
+        )
+
+    steamcmd = [STEAMCMD_SH]
     steamcmd.extend(["+force_install_dir", "/arma3"])
     steamcmd.extend(["+login", os.environ["STEAM_USER"], os.environ["STEAM_PASSWORD"]])
     steamcmd.extend(["+app_update", "233780"])
@@ -48,13 +62,16 @@ if os.environ["SKIP_INSTALL"] in ["", "false"]:
                 ["+download_depot", "233780", depot_parts[0], depot_parts[1]]
             )
     steamcmd.extend(["+quit"])
-    subprocess.call(steamcmd)
+    result = subprocess.call(steamcmd)
+    if result != 0:
+        print(f"steamcmd exited with code {result}, aborting.", flush=True)
+        exit(1)
 
 if env_defined("STEAM_ADDITIONAL_DEPOT"):
     for depot in os.environ["STEAM_ADDITIONAL_DEPOT"].split("|"):
         depot_parts = depot.split(",")
         depot_dir = (
-            f"/steamcmd/linux32/steamapps/content/app_233780/depot_{depot_parts[0]}/"
+            f"{STEAMCMD_DIR}/linux32/steamapps/content/app_233780/depot_{depot_parts[0]}/"
         )
         for file in os.listdir(depot_dir):
             shutil.copytree(depot_dir + file, "/arma3/", dirs_exist_ok=True)
@@ -132,5 +149,12 @@ launch += ' -port={} -name="{}" -profiles="/arma3/configs/profiles"'.format(
 if os.path.exists("servermods"):
     launch += mod_param("serverMod", local.mods("servermods"))
 
+if not os.path.isfile(os.environ["ARMA_BINARY"]):
+    print(
+        f"ERROR: {os.environ['ARMA_BINARY']} not found in /arma3 -- install failed or never ran.",
+        flush=True,
+    )
+    exit(1)
+
 print("LAUNCHING ARMA SERVER WITH", launch, flush=True)
-os.system(launch)
+subprocess.call(launch, shell=True)

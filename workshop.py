@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import urllib.request
+from typing import List
 
 import keys
 
@@ -9,8 +10,8 @@ WORKSHOP = "steamapps/workshop/content/107410/"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"  # noqa: E501
 
 
-def download(mods):
-    steamcmd = ["/steamcmd/steamcmd.sh"]
+def download(mods: List[str]) -> None:
+    steamcmd = ["/arma3/steamcmd/steamcmd.sh"]
     steamcmd.extend(["+force_install_dir", "/arma3"])
     steamcmd.extend(["+login", os.environ["STEAM_USER"], os.environ["STEAM_PASSWORD"]])
     for id in mods:
@@ -19,7 +20,7 @@ def download(mods):
     subprocess.call(steamcmd)
 
 
-def preset(mod_file):
+def preset(mod_file: str) -> List[str]:
     if mod_file.startswith("http"):
         req = urllib.request.Request(
             mod_file,

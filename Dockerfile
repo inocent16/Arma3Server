@@ -21,23 +21,22 @@ RUN apt-get update \
     && \
     apt-get autoremove -y \
     && \
-    rm -rf /var/lib/apt/lists/* \
-    && \
-    mkdir -p /steamcmd \
-    && \
-    wget -qO- 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz' | tar zxf - -C /steamcmd
+    rm -rf /var/lib/apt/lists/*
 
-# Pterodactyl-compatible user (matches Wings default uid 999 / gid 988)
-RUN groupadd -g 988 pterodactyl \
-    && useradd -u 999 -g 988 -M -N -s /usr/sbin/nologin container \
-    && chown -R 999:988 /steamcmd
+# Pterodactyl requires a user named "container" with home /home/container;
+# Wings runs the container with its own configured uid/gid (chowning the
+# mounted volume to match), overriding whatever USER is baked in here, so we
+# don't pin a uid/gid ourselves.
+RUN useradd -m -d /home/container -s /usr/sbin/nologin container
 
 # Redirect Arma's fixed /arma3 working path to Pterodactyl's persistent mount point.
 # All scripts (launch.py, workshop.py, local.py, keys.py) reference /arma3 either
 # directly or via relative paths against WORKDIR /arma3 -- this symlink means every
 # one of those writes transparently lands inside the volume Wings actually persists,
-# with zero changes needed to the Python source.
-RUN rm -rf /arma3 && mkdir -p /home/container && ln -s /home/container /arma3
+# with zero changes needed to the Python source. steamcmd is also installed inside
+# this volume at runtime (not baked into the image) so it inherits the same,
+# correctly-chowned permissions instead of a build-time uid that Wings may not use.
+RUN rm -rf /arma3 && ln -s /home/container /arma3
 
 ENV ARMA_BINARY=./arma3server_x64
 ENV ARMA_CONFIG=main.cfg
