@@ -3,7 +3,14 @@ LABEL maintainer="Brett - github.com/brettmayson, modified for Pterodactyl by in
 LABEL org.opencontainers.image.source=https://github.com/inocent16/Arma3Server
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN apt-get update \
+# arma3server_x64 itself (not just steamcmd) still links against a handful of i386
+# libs and a couple of engine dependencies -- libtbb2 (threading) and libsdl2 in
+# particular -- that aren't part of a minimal Debian install. Without them the
+# server segfaults on startup with no other output, since the missing symbols are
+# resolved lazily rather than failing to load up front.
+RUN dpkg --add-architecture i386 \
+    && \
+    apt-get update \
     && \
     apt-get install -y --no-install-recommends --no-install-suggests \
         python3 \
@@ -14,6 +21,12 @@ RUN apt-get update \
         ca-certificates \
         curl \
         libstdc++6 \
+        libstdc++6:i386 \
+        libtbb2 \
+        libtbb2:i386 \
+        libsdl2-2.0-0 \
+        libsdl2-2.0-0:i386 \
+        numactl \
     && \
     apt-get remove --purge -y \
     && \
