@@ -23,19 +23,8 @@ RUN apt-get update \
     && \
     rm -rf /var/lib/apt/lists/*
 
-# Pterodactyl requires a user named "container" with home /home/container;
-# Wings runs the container with its own configured uid/gid (chowning the
-# mounted volume to match), overriding whatever USER is baked in here, so we
-# don't pin a uid/gid ourselves.
 RUN useradd -m -d /home/container -s /usr/sbin/nologin container
-
-# Redirect Arma's fixed /arma3 working path to Pterodactyl's persistent mount point.
-# All scripts (launch.py, workshop.py, local.py, keys.py) reference /arma3 either
-# directly or via relative paths against WORKDIR /arma3 -- this symlink means every
-# one of those writes transparently lands inside the volume Wings actually persists,
-# with zero changes needed to the Python source. steamcmd is also installed inside
-# this volume at runtime (not baked into the image) so it inherits the same,
-# correctly-chowned permissions instead of a build-time uid that Wings may not use.
+ENV HOME=/home/container
 RUN rm -rf /arma3 && ln -s /home/container /arma3
 
 ENV ARMA_BINARY=./arma3server_x64
