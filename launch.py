@@ -111,9 +111,11 @@ os.environ["LD_PRELOAD"] = (
 # Mods
 
 mods = []
+cdlc_flags = []
 
 if os.environ["MODS_PRESET"] != "":
     mods.extend(workshop.preset(os.environ["MODS_PRESET"]))
+    cdlc_flags.extend(workshop.cdlc(os.environ["MODS_PRESET"]))
 
 if os.environ["MODS_LOCAL"] == "true" and os.path.exists("mods"):
     mods.extend(local.mods("mods"))
@@ -127,8 +129,21 @@ launch = "{} -limitFPS={} -world={} {} {}".format(
 )
 
 if os.environ["ARMA_CDLC"] != "":
-    for cdlc in os.environ["ARMA_CDLC"].split(";"):
-        launch += " -mod={}".format(cdlc)
+    for flag in os.environ["ARMA_CDLC"].split(";"):
+        if flag not in cdlc_flags:
+            cdlc_flags.append(flag)
+
+if cdlc_flags:
+    for flag in cdlc_flags:
+        launch += " -mod={}".format(flag)
+    if os.environ["STEAM_BRANCH"] != "creatordlc":
+        print(
+            f"WARNING: CDLC flags {cdlc_flags} are set to load, but STEAM_BRANCH="
+            f"'{os.environ['STEAM_BRANCH']}' -- steamcmd only downloads CDLC content "
+            "on the creatordlc branch, and that's read before mods are, so it won't "
+            "take effect until STEAM_BRANCH=creatordlc is set and the server restarts.",
+            flush=True,
+        )
 
 clients = int(os.environ["HEADLESS_CLIENTS"])
 print("Headless Clients:", clients)
