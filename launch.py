@@ -27,6 +27,12 @@ if not os.path.isdir(KEYS):
         os.remove(KEYS)
     os.makedirs(KEYS)
 
+# The Linux port still expects the Windows-style user-profile directories under
+# ~/.local/share -- unrelated to the -profiles= CLI flag below, which only covers
+# server config/profile .cfg files. Without these the server segfaults on startup.
+for profile_dir in ("Arma 3", "Arma 3 - Other Profiles"):
+    os.makedirs(os.path.join(os.environ["HOME"], ".local/share", profile_dir), exist_ok=True)
+
 STEAMCMD_DIR = "/arma3/steamcmd"
 STEAMCMD_SH = os.path.join(STEAMCMD_DIR, "steamcmd.sh")
 
