@@ -90,6 +90,24 @@ if env_defined("STEAM_ADDITIONAL_DEPOT"):
             shutil.copytree(depot_dir + file, "/arma3/", dirs_exist_ok=True)
             print(f"Moved {file} to /arma3")
 
+# Wings runs this container as its own uid:gid, which has no /etc/passwd entry in
+# the image. The engine calls getpwuid() directly (not just $HOME) during startup,
+# and a failed lookup there is what segfaults it -- not a config or dependency
+# issue. Give it something to resolve via nss_wrapper's LD_PRELOAD shim, scoped to
+# just the actual game binary so it doesn't affect steamcmd above.
+uid, gid = os.getuid(), os.getgid()
+with open(os.environ["NSS_WRAPPER_PASSWD"], "w") as f:
+    f.write("root:x:0:0:root:/root:/bin/bash\n")
+    f.write(f"container:x:{uid}:{gid}:container:{os.environ['HOME']}:/bin/bash\n")
+with open(os.environ["NSS_WRAPPER_GROUP"], "w") as f:
+    f.write("root:x:0:\n")
+    f.write(f"container:x:{gid}:\n")
+os.environ["LD_PRELOAD"] = (
+    "/usr/lib/x86_64-linux-gnu/libnss_wrapper.so"
+    if "x64" in os.environ["ARMA_BINARY"]
+    else "/usr/lib/i386-linux-gnu/libnss_wrapper.so"
+)
+
 # Mods
 
 mods = []

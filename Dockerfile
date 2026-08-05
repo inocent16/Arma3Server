@@ -3,11 +3,17 @@ LABEL maintainer="Brett - github.com/brettmayson, modified for Pterodactyl by in
 LABEL org.opencontainers.image.source=https://github.com/inocent16/Arma3Server
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-# arma3server_x64 itself (not just steamcmd) still links against a handful of i386
-# libs and a couple of engine dependencies -- libtbb2 (threading) and libsdl2 in
-# particular -- that aren't part of a minimal Debian install. Without them the
-# server segfaults on startup with no other output, since the missing symbols are
-# resolved lazily rather than failing to load up front.
+# arma3server_x64 links against a handful of engine dependencies -- libtbb2
+# (threading) and libsdl2 in particular -- that aren't part of a minimal Debian
+# install; without them it can fail in ways that don't surface as a normal
+# missing-library error. libnss-wrapper is separate and required: Wings runs the
+# container as its own uid:gid with no matching /etc/passwd entry (see the
+# useradd comment below), and the engine calls getpwuid() directly rather than
+# only reading $HOME -- with no entry to resolve, that returns NULL and the
+# engine promptly dereferences it, segfaulting on startup before printing
+# anything. launch.py sets up nss_wrapper's LD_PRELOAD shim with a synthetic
+# passwd/group entry for whatever uid it's actually running as before it
+# launches the game binary.
 RUN dpkg --add-architecture i386 \
     && \
     apt-get update \
@@ -27,6 +33,8 @@ RUN dpkg --add-architecture i386 \
         libsdl2-2.0-0 \
         libsdl2-2.0-0:i386 \
         numactl \
+        libnss-wrapper \
+        libnss-wrapper:i386 \
     && \
     apt-get remove --purge -y \
     && \
@@ -38,6 +46,8 @@ RUN dpkg --add-architecture i386 \
 
 RUN useradd -m -d /home/container -s /usr/sbin/nologin container
 ENV HOME=/home/container
+ENV NSS_WRAPPER_PASSWD=/tmp/passwd
+ENV NSS_WRAPPER_GROUP=/tmp/group
 RUN rm -rf /arma3 && ln -s /home/container /arma3
 
 ENV ARMA_BINARY=./arma3server_x64
