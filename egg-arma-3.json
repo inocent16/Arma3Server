@@ -22,9 +22,9 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/ash\n# No separate install step is needed: /launch.py installs/updates steamcmd\n# and the Arma 3 dedicated server itself inside the persistent volume the\n# first time (and every time) the server container starts, unless\n# SKIP_INSTALL=true is set. This step just makes sure the volume exists.\nmkdir -p /mnt/server\necho \"Nothing to pre-install. Arma 3 + steamcmd will be installed/updated on first boot.\"",
-            "container": "ghcr.io/pterodactyl/installers:alpine",
-            "entrypoint": "ash"
+            "script": "#!/bin/bash\nset -euo pipefail\n\napt-get update\napt-get install -y --no-install-recommends ca-certificates curl lib32gcc-s1 lib32stdc++6 libcurl4\nrm -rf /var/lib/apt/lists/*\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nmkdir -p steamcmd\ncurl -sSL 'https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz' | tar zxf - -C steamcmd\n\nSTEAMCMD_ARGS=(+force_install_dir /mnt/server +login \"$STEAM_USER\" \"$STEAM_PASSWORD\" +app_update 233780)\nif [ -n \"${STEAM_BRANCH:-}\" ]; then\n    STEAMCMD_ARGS+=(-beta \"$STEAM_BRANCH\")\nfi\nif [ -n \"${STEAM_BRANCH_PASSWORD:-}\" ]; then\n    STEAMCMD_ARGS+=(-betapassword \"$STEAM_BRANCH_PASSWORD\")\nfi\nSTEAMCMD_ARGS+=(validate +quit)\n\n./steamcmd/steamcmd.sh \"${STEAMCMD_ARGS[@]}\"\n\nif [ -n \"${STEAM_ADDITIONAL_DEPOT:-}\" ]; then\n    IFS='|' read -ra DEPOTS <<< \"$STEAM_ADDITIONAL_DEPOT\"\n    for depot in \"${DEPOTS[@]}\"; do\n        depot_id=\"${depot%%,*}\"\n        manifest_id=\"${depot#*,}\"\n        ./steamcmd/steamcmd.sh +login \"$STEAM_USER\" \"$STEAM_PASSWORD\" +download_depot 233780 \"$depot_id\" \"$manifest_id\" +quit\n        depot_dir=\"steamcmd/linux32/steamapps/content/app_233780/depot_${depot_id}\"\n        if [ -d \"$depot_dir\" ]; then\n            cp -a \"$depot_dir\"/. /mnt/server/\n        fi\n    done\nfi\n\nif [ ! -f /mnt/server/arma3server_x64 ]; then\n    echo \"ERROR: arma3server_x64 missing after install -- steamcmd did not complete successfully.\"\n    exit 1\nfi\n\necho \"Arma 3 dedicated server installed successfully.\"\n",
+            "container": "ghcr.io/pterodactyl/installers:debian",
+            "entrypoint": "bash"
         }
     },
     "variables": [
