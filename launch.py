@@ -40,6 +40,34 @@ if not os.path.isdir(KEYS):
 for profile_dir in ("Arma 3", "Arma 3 - Other Profiles"):
     os.makedirs(os.path.join(os.environ["HOME"], ".local/share", profile_dir), exist_ok=True)
 
+# CDLC have to be known before steamcmd runs, since they live on the creatordlc
+# branch and steamcmd needs -beta set for that up front -- unlike regular Workshop
+# mods, which can only be downloaded once steamcmd itself exists, so those stay
+# in the Mods section below. Parsing here means MODS_PRESET only has to list a
+# CDLC once; it doesn't need to also be repeated in ARMA_CDLC.
+mod_ids: List[str] = []
+cdlc_flags: List[str] = []
+if os.environ["MODS_PRESET"] != "":
+    mod_ids, cdlc_flags = workshop.parse(os.environ["MODS_PRESET"])
+
+if os.environ["ARMA_CDLC"] != "":
+    for flag in os.environ["ARMA_CDLC"].split(";"):
+        if flag not in cdlc_flags:
+            cdlc_flags.append(flag)
+
+steam_branch = os.environ["STEAM_BRANCH"]
+if cdlc_flags:
+    if steam_branch in ("", "public"):
+        print(f"Detected CDLC {cdlc_flags} in preset -- using the creatordlc branch.", flush=True)
+        steam_branch = "creatordlc"
+    elif steam_branch != "creatordlc":
+        print(
+            f"WARNING: CDLC flags {cdlc_flags} are set to load, but STEAM_BRANCH="
+            f"'{steam_branch}' was set explicitly, so it's being left alone -- "
+            "that branch needs to carry the CDLC content itself, or this won't work.",
+            flush=True,
+        )
+
 STEAMCMD_DIR = "/arma3/steamcmd"
 STEAMCMD_SH = os.path.join(STEAMCMD_DIR, "steamcmd.sh")
 
@@ -60,8 +88,8 @@ if os.environ["SKIP_INSTALL"] in ["", "false"]:
     steamcmd.extend(["+force_install_dir", "/arma3"])
     steamcmd.extend(["+login", os.environ["STEAM_USER"], os.environ["STEAM_PASSWORD"]])
     steamcmd.extend(["+app_update", "233780"])
-    if env_defined("STEAM_BRANCH"):
-        steamcmd.extend(["-beta", os.environ["STEAM_BRANCH"]])
+    if steam_branch:
+        steamcmd.extend(["-beta", steam_branch])
     if env_defined("STEAM_BRANCH_PASSWORD"):
         steamcmd.extend(["-betapassword", os.environ["STEAM_BRANCH_PASSWORD"]])
     steamcmd.extend(["validate"])
@@ -111,11 +139,9 @@ os.environ["LD_PRELOAD"] = (
 # Mods
 
 mods = []
-cdlc_flags = []
 
-if os.environ["MODS_PRESET"] != "":
-    mods.extend(workshop.preset(os.environ["MODS_PRESET"]))
-    cdlc_flags.extend(workshop.cdlc(os.environ["MODS_PRESET"]))
+if mod_ids:
+    mods.extend(workshop.download_mods(mod_ids))
 
 if os.environ["MODS_LOCAL"] == "true" and os.path.exists("mods"):
     mods.extend(local.mods("mods"))
@@ -128,22 +154,8 @@ launch = "{} -limitFPS={} -world={} {} {}".format(
     mod_param("mod", mods),
 )
 
-if os.environ["ARMA_CDLC"] != "":
-    for flag in os.environ["ARMA_CDLC"].split(";"):
-        if flag not in cdlc_flags:
-            cdlc_flags.append(flag)
-
-if cdlc_flags:
-    for flag in cdlc_flags:
-        launch += " -mod={}".format(flag)
-    if os.environ["STEAM_BRANCH"] != "creatordlc":
-        print(
-            f"WARNING: CDLC flags {cdlc_flags} are set to load, but STEAM_BRANCH="
-            f"'{os.environ['STEAM_BRANCH']}' -- steamcmd only downloads CDLC content "
-            "on the creatordlc branch, and that's read before mods are, so it won't "
-            "take effect until STEAM_BRANCH=creatordlc is set and the server restarts.",
-            flush=True,
-        )
+for flag in cdlc_flags:
+    launch += " -mod={}".format(flag)
 
 clients = int(os.environ["HEADLESS_CLIENTS"])
 print("Headless Clients:", clients)

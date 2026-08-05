@@ -2,7 +2,7 @@ import os
 import re
 import subprocess
 import urllib.request
-from typing import List
+from typing import List, Tuple
 
 import keys
 
@@ -47,28 +47,29 @@ def _fetch(mod_file: str) -> str:
         return f.read()
 
 
-def preset(mod_file: str) -> List[str]:
+def parse(mod_file: str) -> Tuple[List[str], List[str]]:
+    """Read a Launcher preset once, returning (workshop mod ids, CDLC flags).
+
+    Split from downloading so CDLC can be known before steamcmd runs -- it needs
+    to pick the creatordlc branch upfront, while the mods themselves can only be
+    downloaded once steamcmd is already installed.
+    """
     html = _fetch(mod_file)
-    mods = []
-    moddirs = []
-    regex = r"filedetails\/\?id=(\d+)\""
-    matches = re.finditer(regex, html, re.MULTILINE)
-    for _, match in enumerate(matches, start=1):
-        mods.append(match.group(1))
-        moddir = WORKSHOP + match.group(1)
-        moddirs.append(moddir)
-    download(mods)
+    mod_ids = [
+        match.group(1)
+        for match in re.finditer(r"filedetails\/\?id=(\d+)\"", html, re.MULTILINE)
+    ]
+    cdlc_flags = []
+    for match in re.finditer(r"store\.steampowered\.com/app/(\d+)", html):
+        flag = CDLC_APPIDS.get(match.group(1))
+        if flag and flag not in cdlc_flags:
+            cdlc_flags.append(flag)
+    return mod_ids, cdlc_flags
+
+
+def download_mods(mod_ids: List[str]) -> List[str]:
+    download(mod_ids)
+    moddirs = [WORKSHOP + mod_id for mod_id in mod_ids]
     for moddir in moddirs:
         keys.copy(moddir)
     return moddirs
-
-
-def cdlc(mod_file: str) -> List[str]:
-    html = _fetch(mod_file)
-    regex = r"store\.steampowered\.com/app/(\d+)"
-    flags = []
-    for match in re.finditer(regex, html):
-        flag = CDLC_APPIDS.get(match.group(1))
-        if flag and flag not in flags:
-            flags.append(flag)
-    return flags

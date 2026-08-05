@@ -120,10 +120,13 @@ Bohemia-updated list of codes here: <https://community.bistudio.com/wiki/Categor
 
 If `MODS_PRESET` is set, any Creator DLC included in that preset are detected
 automatically from their Steam store links and loaded the same as if listed in
-`ARMA_CDLC` -- you don't need to list them in both places. `STEAM_BRANCH` still has
-to be set to `creatordlc` yourself, since steamcmd reads it before the preset is
-even parsed; if CDLC are detected but the branch isn't set, the console will warn
-on startup rather than silently loading a mod flag with no content behind it.
+`ARMA_CDLC` -- you don't need to list them in both places. The preset is parsed
+before steamcmd runs specifically so this can also switch `STEAM_BRANCH` to
+`creatordlc` on its own when it's still at the default `public`, so in the common
+case you don't need to set that yourself either. If you *have* set `STEAM_BRANCH`
+to something else explicitly, that choice is left alone rather than overridden --
+the console will warn on startup if that leaves detected CDLC without a branch
+that actually carries their content.
 
 ## Loading mods
 
