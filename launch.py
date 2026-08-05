@@ -20,6 +20,13 @@ def env_defined(key: str) -> bool:
 CONFIG_FILE = os.environ["ARMA_CONFIG"]
 KEYS = "/arma3/keys"
 
+# Wings injects its own SERVER_PORT correctly, but doesn't expand the {{SERVER_PORT}}
+# template in a custom egg variable's default_value -- our PORT variable is left as
+# that literal, unexpanded string under Pterodactyl. Prefer SERVER_PORT when present
+# (Pterodactyl) and fall back to PORT for standalone docker/docker-compose use, where
+# SERVER_PORT doesn't exist and PORT is set directly.
+SERVER_PORT = os.environ.get("SERVER_PORT") or os.environ["PORT"]
+
 if env_defined("CLEAR_KEYS") and os.environ["CLEAR_KEYS"] == "true" and os.path.isdir(KEYS):
     shutil.rmtree(KEYS)
 if not os.path.isdir(KEYS):
@@ -129,7 +136,7 @@ if clients != 0:
         launch += ' -config="/tmp/arma3.cfg"'
 
     client_launch = launch
-    client_launch += " -client -connect=127.0.0.1 -port={}".format(os.environ["PORT"])
+    client_launch += " -client -connect=127.0.0.1 -port={}".format(SERVER_PORT)
     if "password" in config_values:
         client_launch += " -password={}".format(config_values["password"])
 
@@ -149,7 +156,7 @@ else:
     launch += ' -config="/arma3/configs/{}"'.format(CONFIG_FILE)
 
 launch += ' -port={} -name="{}" -profiles="/arma3/configs/profiles"'.format(
-    os.environ["PORT"], os.environ["ARMA_PROFILE"]
+    SERVER_PORT, os.environ["ARMA_PROFILE"]
 )
 
 if os.path.exists("servermods"):
