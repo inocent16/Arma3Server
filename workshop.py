@@ -26,14 +26,11 @@ CDLC_APPIDS = {
 }
 
 
-def download(mods: List[str]) -> None:
-    if not mods:
-        return
+def download(mod_id: str) -> None:
     steamcmd = ["/arma3/steamcmd/steamcmd.sh"]
     steamcmd.extend(["+force_install_dir", "/arma3"])
     steamcmd.extend(["+login", os.environ["STEAM_USER"], os.environ["STEAM_PASSWORD"]])
-    for id in mods:
-        steamcmd.extend(["+workshop_download_item", "107410", id])
+    steamcmd.extend(["+workshop_download_item", "107410", mod_id])
     steamcmd.extend(["+quit"])
     local.call(steamcmd)
 
@@ -109,13 +106,20 @@ def download_mods(mod_ids: List[str]) -> List[str]:
     if stale:
         print(f"Updating {len(stale)} of {len(mod_ids)} mods...", flush=True)
 
-    download(stale)
-
+    # One steamcmd call per mod, each immediately followed by writing that mod's
+    # own marker -- not one batched call for the whole preset with markers
+    # written at the end, so a mod already downloaded this boot stays counted as
+    # current even if something (a restart, a crash, the server getting stopped)
+    # cuts the run short before the rest of the preset finishes.
     moddirs = []
-    for mod_id in mod_ids:
+    for i, mod_id in enumerate(mod_ids, start=1):
         moddir = WORKSHOP + mod_id
         moddirs.append(moddir)
-        if mod_id in stale and os.path.isdir(moddir):
+        if mod_id not in stale:
+            continue
+        print(f"Updating mod {mod_id} ({i}/{len(mod_ids)})...", flush=True)
+        download(mod_id)
+        if os.path.isdir(moddir):
             local.lowercase(moddir)
             keys.copy(moddir)
             with open(os.path.join(moddir, UPDATED_MARKER), "w") as f:
