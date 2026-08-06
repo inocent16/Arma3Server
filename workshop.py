@@ -1,14 +1,17 @@
 import os
 import re
 import subprocess
+import time
 import urllib.request
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import keys
 import local
 
 WORKSHOP = "steamapps/workshop/content/107410/"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"  # noqa: E501
+CHANGELOG_URL = "https://steamcommunity.com/sharedfiles/filedetails/changelog/{}"
+UPDATED_MARKER = ".workshop_updated"
 
 # Creator DLC don't have Workshop file IDs -- the launcher preset links to their
 # Steam store page instead (store.steampowered.com/app/<appid>). Maps those to the
@@ -25,6 +28,8 @@ CDLC_APPIDS = {
 
 
 def download(mods: List[str]) -> None:
+    if not mods:
+        return
     steamcmd = ["/arma3/steamcmd/steamcmd.sh"]
     steamcmd.extend(["+force_install_dir", "/arma3"])
     steamcmd.extend(["+login", os.environ["STEAM_USER"], os.environ["STEAM_PASSWORD"]])
@@ -32,6 +37,37 @@ def download(mods: List[str]) -> None:
         steamcmd.extend(["+workshop_download_item", "107410", id])
     steamcmd.extend(["+quit"])
     subprocess.call(steamcmd)
+
+
+def _latest_update(mod_id: str) -> Optional[int]:
+    """The epoch timestamp of a Workshop item's most recent changelog entry, or
+    None if it can't be determined (no changelog page, network error, etc)."""
+    try:
+        req = urllib.request.Request(
+            CHANGELOG_URL.format(mod_id), headers={"User-Agent": USER_AGENT}
+        )
+        html = urllib.request.urlopen(req, timeout=10).read().decode(errors="replace")
+        match = re.search(r'<p id="(\d+)"', html)
+        return int(match.group(1)) if match else None
+    except (OSError, ValueError):
+        return None
+
+
+def _is_stale(mod_id: str, latest: Optional[int]) -> bool:
+    """Whether a mod has to go through steamcmd this boot at all. Re-running
+    +workshop_download_item and re-walking a mod's files for every item on every
+    single restart doesn't scale to large presets -- most of it is already
+    current. Unable to tell either way (no marker yet, no changelog reachable)
+    errs toward updating rather than silently going stale."""
+    marker = os.path.join(WORKSHOP + mod_id, UPDATED_MARKER)
+    if not os.path.isfile(marker) or latest is None:
+        return True
+    try:
+        with open(marker) as f:
+            known = int(f.read().strip())
+    except (OSError, ValueError):
+        return True
+    return latest > known
 
 
 def _fetch(mod_file: str) -> str:
@@ -69,9 +105,20 @@ def parse(mod_file: str) -> Tuple[List[str], List[str]]:
 
 
 def download_mods(mod_ids: List[str]) -> List[str]:
-    download(mod_ids)
-    moddirs = [WORKSHOP + mod_id for mod_id in mod_ids]
-    for moddir in moddirs:
-        local.lowercase(moddir)
-        keys.copy(moddir)
+    latest = {mod_id: _latest_update(mod_id) for mod_id in mod_ids}
+    stale = [mod_id for mod_id in mod_ids if _is_stale(mod_id, latest[mod_id])]
+    if stale:
+        print(f"Updating {len(stale)} of {len(mod_ids)} mods...", flush=True)
+
+    download(stale)
+
+    moddirs = []
+    for mod_id in mod_ids:
+        moddir = WORKSHOP + mod_id
+        moddirs.append(moddir)
+        if mod_id in stale and os.path.isdir(moddir):
+            local.lowercase(moddir)
+            keys.copy(moddir)
+            with open(os.path.join(moddir, UPDATED_MARKER), "w") as f:
+                f.write(str(latest[mod_id] if latest[mod_id] is not None else int(time.time())))
     return moddirs

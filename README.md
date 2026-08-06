@@ -150,3 +150,10 @@ Set the environment variable `MODS_PRESET` to the HTML preset file exported from
 `-e MODS_PRESET="my_mods.html"`
 
 `-e MODS_PRESET="http://example.com/my_mods.html"`
+
+Each mod is only re-downloaded (and re-lowercased/re-keyed) when it's actually changed --
+before touching steamcmd, each mod's Steam Workshop changelog is checked against a marker
+file left in its folder from the last time it was updated. New mods (no marker yet) and
+anything that can't be checked always update, so this errs toward re-downloading rather than
+silently running stale content; it just skips the redundant work for everything that hasn't
+changed, which matters once a preset has more than a handful of mods.
