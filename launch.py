@@ -6,6 +6,7 @@ from string import Template
 from typing import List
 
 import local
+import presets
 import workshop
 
 
@@ -39,6 +40,15 @@ if not os.path.isdir(KEYS):
 # server config/profile .cfg files. Without these the server segfaults on startup.
 for profile_dir in ("Arma 3", "Arma 3 - Other Profiles"):
     os.makedirs(os.path.join(os.environ["HOME"], ".local/share", profile_dir), exist_ok=True)
+
+# Mod configuration (userconfig/) and the main server config, pulled from a
+# separate presets/settings repo -- unrelated to MODS_PRESET/ARMA_CDLC below,
+# which only ever control which mods load, never how they're configured. Runs
+# before steamcmd so userconfig is in place before the game binary ever starts.
+if os.environ.get("SETTINGS_ENABLED") == "true" and env_defined("SETTINGS_SOURCES"):
+    sources = [s.strip() for s in os.environ["SETTINGS_SOURCES"].split(";") if s.strip()]
+    resolved = presets.resolve(os.environ.get("SETTINGS_REPO", ""), sources)
+    presets.apply(resolved)
 
 # CDLC have to be known before steamcmd runs, since they live on the creatordlc
 # branch and steamcmd needs -beta set for that up front -- unlike regular Workshop

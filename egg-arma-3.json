@@ -219,6 +219,36 @@
             "field_type": "text"
         },
         {
+            "name": "Settings Enabled",
+            "description": "Master switch for pulling mod configuration (userconfig/) and the main server config from Settings Repo/Settings Sources. Unrelated to Mods Preset/Arma CDLC, which only control which mods load.",
+            "env_variable": "SETTINGS_ENABLED",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Settings Repo",
+            "description": "Base raw-content URL of a GitHub repo of presets/settings, e.g. https://raw.githubusercontent.com/<org>/<repo>/<branch>/, or a local path. Only used when Settings Enabled is true.",
+            "env_variable": "SETTINGS_REPO",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:191",
+            "field_type": "text"
+        },
+        {
+            "name": "Settings Sources",
+            "description": "Semicolon-separated list of presets/<name> and/or settings/<name> folders to apply in order (later entries win over earlier ones for anything they both provide), e.g. presets/hardcore-op;settings/ace-no-med.",
+            "env_variable": "SETTINGS_SOURCES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:512",
+            "field_type": "text"
+        },
+        {
             "name": "Server Port",
             "description": "Internal: mirrors the primary allocation port assigned by Wings. Arma 3 uses this port through port+3.",
             "env_variable": "PORT",

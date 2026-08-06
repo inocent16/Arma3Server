@@ -94,6 +94,9 @@ updates change console output), adjust the `startup.done` string in the egg's St
 | `-e SKIP_INSTALL`             | Skip Arma 3 installation | `false` |
 | `-e VALIDATE_INSTALL`         | Force steamcmd to checksum-verify every file on every boot, not just check for updates. Slow -- leave off for routine restarts | `false` |
 | `-e CLEAR_KEYS`               | Clear the keys directory every launch (keys will still be copied from mods) | `false` |
+| `-e SETTINGS_ENABLED`         | Master switch for pulling mod configuration/server config from a presets repo -- see [Presets and settings](#presets-and-settings) | `false` |
+| `-e SETTINGS_REPO`            | Base raw-content URL (or local path) of a presets/settings repo | |
+| `-e SETTINGS_SOURCES`         | Semicolon-separated `presets/<name>`/`settings/<name>` folders to apply, in order | |
 
 The Steam account does not need to own Arma 3, but must have Steam Guard disabled.
 
@@ -157,3 +160,44 @@ file left in its folder from the last time it was updated. New mods (no marker y
 anything that can't be checked always update, so this errs toward re-downloading rather than
 silently running stale content; it just skips the redundant work for everything that hasn't
 changed, which matters once a preset has more than a handful of mods.
+
+## Presets and settings
+
+`MODS_PRESET`/`ARMA_CDLC` above only control *which* mods and CDLC load -- they have no
+concept of how those mods are configured, or of the main server config file itself. That's
+what this section is for: pulling mod configuration (`userconfig/<ModFolderName>/`) and the
+server config (`configs/<ARMA_CONFIG>`) from a separate GitHub repo, instead of hand-editing
+them over SFTP on every server individually.
+
+Set `SETTINGS_ENABLED=true`, `SETTINGS_REPO` to that repo's raw base URL (e.g.
+`https://raw.githubusercontent.com/<org>/<repo>/<branch>/`) or a local path, and
+`SETTINGS_SOURCES` to a semicolon-separated list of folders to apply, in order:
+
+`-e SETTINGS_SOURCES="presets/hardcore-op;settings/ace-no-med;settings/thermals-off"`
+
+The repo itself has no fixed format to learn beyond two conventions:
+
+```
+presets/<name>/
+    server.cfg          # optional -- full main.cfg-equivalent content
+    ace3/                # optional -- one folder per mod, named to match that
+        config.hpp       #   mod's own userconfig folder name exactly
+settings/<name>/
+    ...                  # same shape, meant to be picked individually
+```
+
+A **preset** is applied first as the baseline. Each **setting** listed after it is then
+layered on top, and for anything it provides -- a whole mod's folder, or `server.cfg` --
+that entirely replaces whatever the preset (or an earlier setting) had for that same thing.
+Nothing else is touched: overriding ACE3's tuning with a setting never disturbs some other
+mod's userconfig the preset also set up, and a setting with no `server.cfg` of its own leaves
+the preset's server config alone. This is why authoring one is simple -- copy your own local
+`userconfig/<mod>/` folder in as-is, no reformatting, no manifest file to maintain.
+
+Two things worth knowing before turning this on:
+- Once a source resolves a `server.cfg` or a given mod's userconfig folder, that gets
+  overwritten on **every boot** -- direct SFTP edits to those specific files won't survive a
+  restart. Anything not covered by your presets/settings is left alone as normal.
+- This adds a GitHub dependency to every boot the same way `MODS_PRESET` already does for
+  `mods.html` -- if GitHub is unreachable when a source is configured, startup fails loudly
+  rather than silently running with an incomplete config.
