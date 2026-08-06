@@ -134,12 +134,14 @@ that actually carries their content.
 ### Local
 
 1. Place the mods inside `/mods` or `/servermods`.
-2. Be sure that the mod folder is all lowercase and does not show up with quotation marks around it when listing the directory eg `'@ACE(v2)'`
-3. Run the following command from the mods and/or servermods directory to confirm that all the files are lowercase.
-    `find . -depth -exec rename 's/(.*)\/([^\/]*)/$1\/\L$2/' {} \;`
-    If this is NOT the case, the mods will prevent the server from booting.
-4. Make sure that each mod contains a lowercase `/addons` folder. This folder also needs to be lowercase in order for the server to load the required PBO files inside.
-5. Start the server.
+2. Start the server.
+
+Everything inside each mod folder (the `addons` folder, `.pbo` files, etc.) is lowercased
+automatically on every boot before launch, since Arma's Linux port needs lowercase paths but
+neither local uploads nor Steam Workshop preserve that -- this applies the same way whether
+the mod came from `/mods`, `/servermods`, or a Workshop preset. The mod folder's own name
+(e.g. `@ACE`) isn't touched by this and is used as-is, so avoid quotation marks or other
+characters there that could cause issues elsewhere.
 
 ### Workshop
 

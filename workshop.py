@@ -5,6 +5,7 @@ import urllib.request
 from typing import List, Tuple
 
 import keys
+import local
 
 WORKSHOP = "steamapps/workshop/content/107410/"
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.47 Safari/537.36"  # noqa: E501
@@ -71,5 +72,6 @@ def download_mods(mod_ids: List[str]) -> List[str]:
     download(mod_ids)
     moddirs = [WORKSHOP + mod_id for mod_id in mod_ids]
     for moddir in moddirs:
+        local.lowercase(moddir)
         keys.copy(moddir)
     return moddirs
