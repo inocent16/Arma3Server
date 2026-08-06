@@ -199,6 +199,16 @@
             "field_type": "text"
         },
         {
+            "name": "Validate Install",
+            "description": "Force steamcmd to checksum-verify every file on every boot, not just check for updates. Slow (can take many minutes) -- leave off for routine restarts, enable if you suspect corrupted files.",
+            "env_variable": "VALIDATE_INSTALL",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
             "name": "Clear Keys",
             "description": "Clear the /arma3/keys directory on every launch before mod keys are re-copied in.",
             "env_variable": "CLEAR_KEYS",

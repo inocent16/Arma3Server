@@ -92,7 +92,8 @@ if os.environ["SKIP_INSTALL"] in ["", "false"]:
         steamcmd.extend(["-beta", steam_branch])
     if env_defined("STEAM_BRANCH_PASSWORD"):
         steamcmd.extend(["-betapassword", os.environ["STEAM_BRANCH_PASSWORD"]])
-    steamcmd.extend(["validate"])
+    if os.environ.get("VALIDATE_INSTALL") == "true":
+        steamcmd.extend(["validate"])
     if env_defined("STEAM_ADDITIONAL_DEPOT"):
         for depot in os.environ["STEAM_ADDITIONAL_DEPOT"].split("|"):
             depot_parts = depot.split(",")
