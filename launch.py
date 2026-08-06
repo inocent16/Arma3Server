@@ -104,7 +104,7 @@ if os.environ["SKIP_INSTALL"] in ["", "false"]:
                 ["+download_depot", "233780", depot_parts[0], depot_parts[1]]
             )
     steamcmd.extend(["+quit"])
-    result = subprocess.call(steamcmd)
+    result = local.call(steamcmd)
     if result != 0:
         print(f"steamcmd exited with code {result}, aborting.", flush=True)
         exit(1)
@@ -216,4 +216,4 @@ if not os.path.isfile(os.environ["ARMA_BINARY"]):
     exit(1)
 
 print("LAUNCHING ARMA SERVER WITH", launch, flush=True)
-subprocess.call(launch, shell=True)
+local.call(launch, shell=True)

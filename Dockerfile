@@ -35,6 +35,7 @@ RUN dpkg --add-architecture i386 \
         numactl \
         libnss-wrapper \
         libnss-wrapper:i386 \
+        tini \
     && \
     apt-get remove --purge -y \
     && \
@@ -82,4 +83,11 @@ STOPSIGNAL SIGINT
 
 COPY *.py /
 
+# launch.py runs steamcmd and the game binary as its own subprocesses; without a
+# real init as PID 1, a stop signal only reaches launch.py itself and those
+# children are left running/orphaned rather than shut down with it. -g forwards
+# signals to the whole process group, not just tini's direct child, since the
+# game binary is launched via a shell wrapper (subprocess.call(..., shell=True))
+# rather than being tini's immediate child.
+ENTRYPOINT ["/usr/bin/tini", "-g", "--"]
 CMD ["python3","/launch.py"]

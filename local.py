@@ -1,7 +1,20 @@
 import os
+import subprocess
 from typing import List
 
 import keys
+
+
+def call(cmd, **kwargs) -> int:
+    """subprocess.call, but a stop signal mid-call prints a clean line instead of
+    a KeyboardInterrupt traceback -- tini (see the Dockerfile) forwards the
+    signal to the child itself, so this is just about what shows up in the
+    console, not about the child actually stopping."""
+    try:
+        return subprocess.call(cmd, **kwargs)
+    except KeyboardInterrupt:
+        print("Stopping...", flush=True)
+        exit(0)
 
 
 def lowercase(moddir: str) -> None:

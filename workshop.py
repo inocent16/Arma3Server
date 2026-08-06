@@ -1,6 +1,5 @@
 import os
 import re
-import subprocess
 import time
 import urllib.request
 from typing import List, Optional, Tuple
@@ -36,7 +35,7 @@ def download(mods: List[str]) -> None:
     for id in mods:
         steamcmd.extend(["+workshop_download_item", "107410", id])
     steamcmd.extend(["+quit"])
-    subprocess.call(steamcmd)
+    local.call(steamcmd)
 
 
 def _latest_update(mod_id: str) -> Optional[int]:
